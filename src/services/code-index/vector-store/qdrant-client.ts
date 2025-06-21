@@ -25,8 +25,33 @@ export class QdrantVectorStore implements IVectorStore {
 	 */
 	constructor(workspacePath: string, url: string, vectorSize: number, apiKey?: string) {
 		this.qdrantUrl = url || "http://localhost:6333"
+		let host: string | undefined
+		let port: number | undefined
+		let prefix: string | undefined
+		let https: boolean | undefined
+
+		try {
+			const parsedUrl = new URL(this.qdrantUrl)
+			https = parsedUrl.protocol === "https:"
+			host = parsedUrl.hostname
+			if (parsedUrl.port) {
+				port = parseInt(parsedUrl.port, 10)
+			} else {
+				port = parsedUrl.protocol === "https:" ? 443 : 80
+			}
+			prefix = parsedUrl.pathname === "/" ? undefined : parsedUrl.pathname
+		} catch (error: any) {
+			const errorMessage = error?.message || error
+			throw new Error(
+				t("embeddings:vectorStore.qdrantConnectionFailed", { qdrantUrl: this.qdrantUrl, errorMessage }),
+			)
+		}
+
 		this.client = new QdrantClient({
-			url: this.qdrantUrl,
+			host: host,
+			port: port,
+			prefix: prefix,
+			https: https,
 			apiKey,
 			headers: {
 				"User-Agent": "Roo-Code",
